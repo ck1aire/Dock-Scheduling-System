@@ -5,7 +5,7 @@ Here is the link to the website! https://css-dock-scheduling-system.vercel.app
 
 ## Original Problem
 The existing system stores more than 20 years of scheduling information in a spreadsheet. While the spreadsheet contains a lot of useful information, two important checks still have to be done manually: determining whether a berth has already been reserved during a requested period and determining whether a vessel is actually short enough to fit at the berth it has been assigned.
-I wanted to preserve the useful part of the existing system—a calendar where staff can quickly understand what is happening at each berth—while moving these manual checks into the application itself.
+I wanted to preserve the calendar where staff can quickly understand what is happening at each berth while moving these manual checks into the application itself.
 
 ## Solution
 I built Harbor Scheduler as an interactive scheduling application where a user can view berth availability and create, edit, or delete reservations.
@@ -41,6 +41,6 @@ rather than maintaining separate scheduling systems for events and vessels.
 Because the original prompt was deliberately open-ended, I made several assumptions to keep the prototype focused.
 I assumed that a reservation occupies one berth for its entire date range and that the dates are inclusive. Therefore, if one reservation ends on June 10 and another begins on June 10 at the same berth, I treat that as a conflict.
 I assumed that only one reservation can occupy a berth at a time. I did not attempt to model partial berth usage.
-I also assumed that vessel length is the primary physical compatibility constraint because berth length was the constraint specifically identified in the prompt and historical spreadsheet. A real marine scheduling system would likely need to consider additional characteristics such as draft, beam, tides, utilities, or operational requirements.
+I also assumed that vessel length is the primary physical compatibility constraint because berth length was the constraint specifically identified in the prompt and historical spreadsheet. A real marine scheduling system would likely need to consider additional characteristics like tides, utilities, or operational requirements.
 Events were assumed to occupy the entire berth they are assigned to, just as a vessel would.
-Finally, I treated the supplied historical schedule primarily as reference data rather than trying to build a complete historical migration system within the scope of the take-home.
+Finally, I treated the supplied historical schedule primarily as reference data rather than trying to build a complete historical migration system.
