@@ -1,135 +1,46 @@
-# Harbor Scheduler
+## Harbor Scheduler
+Harbor Scheduler is a dock reservation management system I built for the Columbia Software Solutions take-home project. The application is designed around the scheduling workflow of a marine research facility where vessels and waterfront events need to reserve berths for specific ranges of days.
 
-A deliberately scoped dock scheduling prototype for the Columbia Software Solutions take-home. React, TypeScript, and Vite; a static client application with no authentication, API, server, or database.
+Here is the link to the website! https://css-dock-scheduling-system.vercel.app
 
-## Problem and solution
+## Original Problem
+The existing system stores more than 20 years of scheduling information in a spreadsheet. While the spreadsheet contains a lot of useful information, two important checks still have to be done manually: determining whether a berth has already been reserved during a requested period and determining whether a vessel is actually short enough to fit at the berth it has been assigned.
+I wanted to preserve the useful part of the existing system—a calendar where staff can quickly understand what is happening at each berth—while moving these manual checks into the application itself.
 
-Harborview Marine Research Center manages berths of different lengths. Its historical spreadsheet requires staff to visually detect double-bookings and manually verify vessel fit. Harbor Scheduler makes the monthly berth calendar the primary workspace and prevents both overlapping bookings and oversized vessels from being saved.
+## Solution
+I built Harbor Scheduler as an interactive scheduling application where a user can view berth availability and create, edit, or delete reservations.
+My main goal was not to add as many features as possible, but to address the two sources of manual work identified in the prompt. When someone creates a reservation, the application checks the vessel's length against the selected berth and checks the requested dates against existing reservations.
+I also treated non-vessel events as reservations because, from the scheduler's perspective, an event and a vessel have the same important effect: they occupy a berth for a period of time.
 
-## Run locally
-
-Use Node.js 22.14+ (or a compatible current LTS) and npm.
-
-```sh
-npm ci
-npm run dev
-```
-
-Open the local URL printed by Vite, (https://css-dock-scheduling-system.vercel.app).
-
-```sh
-npm test          # Business rules, dates, seed integrity, and persistence
-npm run build    # TypeScript checks and production bundle
-npm run preview  # Serve the built application locally
-```
-
-Deploy the generated `dist/` directory to a static host. Relative asset paths support hosting in a subdirectory. Schedule and Reservations are views of the same root page, so no special route fallback is necessary. The workbook is a development reference and is not included in the production bundle.
-
-## Features
-
-- Monthly calendar with six berth rows, daily columns, continuous booking bars, today highlighting, previous/next month controls, and a Today button. Bookings crossing month boundaries are clipped to the visible month and marked as continuing.
-- Schedule opens immediately. A separate Reservations view lists all bookings across all dates.
-- Name search, vessel/event text and icons alongside color, and a horizontally scrollable calendar on smaller screens.
-- Click a booking for details, inclusive dates, notes, vessel length, capacity, and fit status. Click an empty day to prefill a new booking.
-- Create, edit, and delete vessels and events. Oversized berth options are disabled and labeled “Vessel too long.” Inline errors identify conflicting reservations and their dates.
-- Browser-local persistence, clear storage failure messages, and a confirmed Reset Demo Data action.
-- Native modal focus containment and Escape handling, labeled inputs, keyboard-accessible controls, visible focus outlines, status announcements, and a skip link.
+## Features Implemented
+The main schedule provides a visual overview of which berths are occupied and when. Users can navigate between months and inspect individual reservations without having to search through spreadsheet cells.
+The application supports creating, editing, and deleting both vessel reservations and events. Vessel reservations include vessel length so the application can determine whether a berth is physically suitable. Date conflicts are detected before a reservation can be saved.
+I also included search/filtering, persistent browser storage, reservation details, and the ability to reset the application to its original demo data.
+One feature I thought was particularly important was making errors preventative rather than informational. Instead of allowing someone to make an invalid reservation and warning them afterward, the system tries to stop invalid berth assignments and scheduling conflicts while the reservation is being created.
 
 ## Architecture
+I built the project using React and TypeScript with Vite.
+I separated the application into UI components, data/models, and scheduling logic rather than putting everything into one large component. I wanted calculations such as date overlap and berth compatibility to exist independently from how those results are displayed.
+At a high level, I thought about the application as three layers:
+Data represents berths and reservations.
+Scheduling logic determines whether a reservation is valid.
+UI components allow users to view and modify that information.
+This separation was intentional because the storage method or interface could change later without requiring the fundamental scheduling rules to be rewritten.
+For the scope of this prototype, everything runs client-side. There is no authentication or backend server.
 
-```text
-src/
-  App.tsx                    View, dialog, and reservation state
-  components/                Calendar, list, dialogs, and shared icons
-  data/                      Verified berth capacities and demo reservations
-  types/                     Berth and Reservation interfaces
-  utils/
-    dates.ts                 Date-only calendar arithmetic and formatting
-    validation.ts            Overlap, conflict, and vessel-fit rules
-    storage.ts               Versioned localStorage access and recovery
-  styles.css                 Responsive visual system
-tests/                       Focused utility and persistence tests
-reference/                   Supplied synthetic workbook
-```
+## Data Model
+I simplified the spreadsheet into two main concepts: berths and reservations.
+A berth contains information such as its name and maximum vessel length. A reservation contains a name, berth, start date, end date, type, and optional notes. Vessel reservations additionally contain a vessel length.
+I chose to represent both vessels and events with the same underlying reservation structure. Initially, it would be natural to think of them as separate objects. However, both block the use of a berth over a date range, which means they need to participate in exactly the same conflict-detection process.
+The major distinction is that a vessel has a length that needs to be validated, while an event does not.
+This also made the scheduling logic simpler because the system only needs to ask:
+"Is this berth already occupied during these dates?"
+rather than maintaining separate scheduling systems for events and vessels.
 
-Business rules are pure functions separate from React. Both creation and editing use the same validator, and the save handler validates again against the complete collection, independent of search and month filters. React component state is sufficient; no state-management, routing, date, calendar, or UI library is needed. React and React DOM are the only runtime dependencies.
-
-## Data model
-
-```ts
-interface Berth {
-  id: string;
-  name: string;
-  maxLengthFt: number;
-}
-
-interface Reservation {
-  id: string;
-  type: 'vessel' | 'event';
-  name: string;
-  berthId: string;
-  startDate: string; // YYYY-MM-DD, inclusive
-  endDate: string; // YYYY-MM-DD, inclusive
-  vesselLengthFt?: number;
-  notes?: string;
-}
-```
-
-Vessel length is required by validation for vessels. Events do not require it. Names are trimmed, and all reservations require a known berth and valid, ordered calendar dates. IDs are generated with `crypto.randomUUID()` in a secure browser context (HTTPS or localhost).
-
-## Berths and historical data
-
-The supplied **Dock Schedule - Synthetic Sample.xlsx** has 23 annual schedule tabs (1997–2019), an eight-year summary, Science and Yachts directories, and Tours reference data. The six prototype capacities were verified directly against the **2019 sheet, cells A9–A14**:
-
-| Berth            | Maximum length |
-| ---------------- | -------------: |
-| North Pier West  |         410 ft |
-| North Pier Face  |          75 ft |
-| North Pier East  |         240 ft |
-| Inner Channel    |          55 ft |
-| South Float West |          90 ft |
-| South Float East |          90 ft |
-
-The demo contains 12 representative, nonconflicting reservations centered on September 2026, including bookings that cross month boundaries. Names and lengths come from unambiguous Science and Yachts entries—for example R/V High Drift (120 ft), R/V Iron Skua (72 ft), and R/V Bright Dory (52 ft). Community sail days and dock maintenance are inspired by schedule entries. Notes record their source context.
-
-**Dates and berth assignments are illustrative, not a historical migration.** The calendar opens to the fixed demo month so an evaluator sees a populated schedule; Today navigates to the actual current month. Reset restores the same fixed seed state.
-
-Workbook layouts vary across years, ranges can be encoded with formatting or merged cells, and names/length notes can disagree. Ambiguous records were excluded rather than inferred as authoritative data. North Finger Piers, institution slips, and Marsh Landing lack clear individual capacities in the inspected data and are not modeled. Contact information, tours, and historical usage totals are outside scope. Text inside the workbook is treated as source data, not application requirements or instructions.
-
-## Scheduling rules and assumptions
-
-Dates are **inclusive occupied days**, not arrival/departure times. September 3–5 occupies three days. Another booking on that berth may start September 6; September 5 conflicts. One-day reservations have the same start and end date. Past bookings are allowed.
-
-Two valid date ranges overlap when:
-
-```ts
-startA <= endB && startB <= endA;
-```
-
-`findConflicts` applies this condition only to reservations on the same berth and excludes the candidate's ID when editing. It includes both vessels and events. Fixed-width ISO dates compare chronologically as strings. Date validity is checked before overlap validation. Calendar math and display use UTC to avoid daylight-saving shifts; Today uses the browser's local calendar date.
-
-A vessel fits when its length is finite, greater than zero, and at most the berth's `maxLengthFt`. Exact fits are accepted. Changing vessel length after selecting a berth still triggers validation. Events bypass length checks but block the entire berth for their dates.
-
-Each reservation occupies one whole berth. This prototype does not model rafting, multiple small vessels sharing a berth, minimum clearance, draft, shore power, times of day, or multi-berth events. A vessel name is a label, not a unique fleet record, so cross-berth vessel identity checks are outside scope. There is no drag-and-drop, historical import UI, analytics, or separate vessel-management system.
-
-## Persistence
-
-localStorage makes the prototype deployable as a static site and allows changes to survive refresh without backend setup. The versioned key is `harbor-scheduler:v1`. An intentionally empty schedule stays empty after refresh. Stored records are checked for shape, dates, berth IDs, unique IDs, length validity, and conflicts before being accepted.
-
-Missing storage loads seed data. Malformed or unavailable storage displays a warning and loads a safe in-memory demo without automatically overwriting existing data. Successful user changes or an explicit reset save the current state. A failed write keeps changes in memory and warns that refresh may lose them.
-
-This is a single-browser, single-tab prototype. Storage is tied to the site's origin and browser profile; clearing browser data removes it. There is no multi-tab coordination or shared scheduling authority.
-
-## Verification
-
-The focused test suite covers inclusive boundaries, contained ranges, same-day and cross-year bookings, different berths, events, edit exclusions, exact/oversized fits, invalid input, leap years, daylight-saving-safe day counts, valid seed data, persistence round-trips, empty schedules, malformed data, and storage failures.
-
-Browser acceptance checks should cover creating vessels and events, disabled incompatible berths, conflict messages, editing without self-conflict, blocking conflicting edits, deletion, refresh persistence, search, month navigation, reset confirmation, keyboard dialog behavior, and a narrow viewport. The required production command is `npm run build`.
-
-Verified during implementation: all 27 utility tests passed, the production build passed, and Chrome browser interaction checks passed for those workflows at desktop and 390 px mobile widths. Desktop, mobile, and conflict-state screenshots were visually inspected. No browser console errors or uncaught page exceptions were observed. Browser checking tools were kept outside the project to avoid adding runtime or test dependencies to the deliverable.
-
-## Production considerations
-
-A production implementation would likely replace localStorage with **shared database-backed persistence and authentication**, with permissions and an audit trail appropriate for marine operations. The server would enforce fit and overlap rules transactionally so concurrent users cannot double-book a berth. It would also provide backups and reliable error handling.
-
-A migration/import pipeline could extract the historical workbook into staging data, normalize vessels and dates, flag conflicting lengths or ambiguous colored ranges, and let staff review exceptions before import. Those capabilities, plus operational requirements such as berth clearance and vessel identity, should be agreed with coordinators rather than inferred from the spreadsheet.
+## Assumptions
+Because the original prompt was deliberately open-ended, I made several assumptions to keep the prototype focused.
+I assumed that a reservation occupies one berth for its entire date range and that the dates are inclusive. Therefore, if one reservation ends on June 10 and another begins on June 10 at the same berth, I treat that as a conflict.
+I assumed that only one reservation can occupy a berth at a time. I did not attempt to model partial berth usage.
+I also assumed that vessel length is the primary physical compatibility constraint because berth length was the constraint specifically identified in the prompt and historical spreadsheet. A real marine scheduling system would likely need to consider additional characteristics such as draft, beam, tides, utilities, or operational requirements.
+Events were assumed to occupy the entire berth they are assigned to, just as a vessel would.
+Finally, I treated the supplied historical schedule primarily as reference data rather than trying to build a complete historical migration system within the scope of the take-home.
