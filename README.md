@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite, normally http://localhost:5173.
+Open the local URL printed by Vite, (https://css-dock-scheduling-system.vercel.app).
 
 ```sh
 npm test          # Business rules, dates, seed integrity, and persistence
